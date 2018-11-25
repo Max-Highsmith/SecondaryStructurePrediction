@@ -7,8 +7,8 @@ import urllib3
 
 window_size=11
 win_it_size = 50
-inOneHotVectSize=22 #
-outOneHotVectSize=4
+inOneHotVectSize=21 #
+outOneHotVectSize=3
 
 http        = urllib3.PoolManager()
 response    = http.request('GET', "http://calla.rnet.missouri.edu/cheng_courses/mlbioinfo/ss_train.txt")
@@ -26,11 +26,11 @@ NUM_TEST_SEQ  = 126
 #preprocessing
 #label Encode
 
-outLab        = ['C','H','E','z']   #z is edge
+outLab        = ['C','H','E']   #z is edge
 outLabEncoder = preprocessing.LabelEncoder()
 outLabEncoder.fit(outLab)
 
-inLab        = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','X','Y','V','z'] #z is edge
+inLab        = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','X','Y','V'] #z is edge
 inLabEncoder = preprocessing.LabelEncoder()
 inLabEncoder.fit(inLab) 
 
@@ -42,6 +42,16 @@ for i in range(0, NUM_TRAIN_SEQ):
 	encodedOut = outLabEncoder.transform(arrayOfCharsOut)
 	encTrainArray.append([encodedIn, encodedOut])
 
+
+'''
+encTestArray = []
+for i in range(0, NUM_TEST_SEQ):
+	arrayOfCharsIn  = list(splitByLine[(i*4)+2])
+	arrayOfCharsOut = list(splitByLine((i*4)+3])
+	encodedIn = inLabEncoder.transform(arrayOfCharsIn)
+	encodedOut = outLabEncoder.transform(arrayOfCharsOut)
+	encTestArray.append([encodedIn, encodedOut]) 
+'''
 #OneHot
 inLab    = np.array(inLab)
 outLab   = np.array(outLab)
@@ -109,5 +119,5 @@ model.compile(loss='mse',
 		optimizer='sgd',
 		metrics=['accuracy'])
 #x,y are numpy array
-model.fit(x_train, y_train, epochs=5, batch_size=32)
+model.fit(x_train, y_train, epochs=500, batch_size=32)
 
