@@ -1,6 +1,6 @@
 import numpy as np
 import pdb
-from Bio import SeqIO
+#from Bio import SeqIO
 from sklearn import preprocessing
 import urllib3
 
@@ -43,16 +43,17 @@ for i in range(0, NUM_TRAIN_SEQ):
 	encTrainArray.append([encodedIn, encodedOut])
 
 
-'''
+#Testing
 encTestArray = []
 for i in range(0, NUM_TEST_SEQ):
-	arrayOfCharsIn  = list(splitByLine[(i*4)+2])
-	arrayOfCharsOut = list(splitByLine((i*4)+3])
-	encodedIn = inLabEncoder.transform(arrayOfCharsIn)
-	encodedOut = outLabEncoder.transform(arrayOfCharsOut)
-	encTestArray.append([encodedIn, encodedOut]) 
-'''
+	arrayOfCharsInTest  = list(splitByLine2[(i*4)+2])
+	arrayOfCharsOutTest = list(splitByLine2((i*4)+3])
+	encodedInTest = inLabEncoder.transform(arrayOfCharsInTest)
+	encodedOutTest = outLabEncoder.transform(arrayOfCharsOutTest)
+	encTestArray.append([encodedInTest, encodedOutTest]) 
+
 #OneHot
+#traingin
 inLab    = np.array(inLab)
 outLab   = np.array(outLab)
 inLab    = inLabEncoder.transform(inLab)
@@ -68,6 +69,12 @@ y_train = np.ones((1, window_size, outOneHotVectSize))
 
 inEnds  = np.zeros(22)
 outEnds = np.zeros(4)
+
+
+x_test  = np.ones((1, window_size, inOneHotVectSize))
+y_test  = np.ones((1, window_size, outOneHotVectSize))
+
+
 for i in range(0, NUM_TRAIN_SEQ):
 	xPiece = inOneHot.transform(np.array(encTrainArray[i][0]).reshape(-1,1)).toarray()
 	yPiece = outOneHot.transform(np.array(encTrainArray[i][1]).reshape(-1,1)).toarray()
@@ -120,4 +127,11 @@ model.compile(loss='mse',
 		metrics=['accuracy'])
 #x,y are numpy array
 model.fit(x_train, y_train, epochs=500, batch_size=32)
+
+#Evaluate model
+model.predict(x_test, batch_size=32)
+
+
+
+
 
