@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import pdb
 #from Bio import SeqIO
 from sklearn import preprocessing
@@ -7,8 +8,8 @@ import urllib3
 
 window_size=11
 win_it_size = 50
-inOneHotVectSize=21 #
-outOneHotVectSize=3
+inOneHotVectSize=22 #
+outOneHotVectSize=4
 
 http        = urllib3.PoolManager()
 response    = http.request('GET', "http://calla.rnet.missouri.edu/cheng_courses/mlbioinfo/ss_train.txt")
@@ -26,11 +27,11 @@ NUM_TEST_SEQ  = 126
 #preprocessing
 #label Encode
 
-outLab        = ['C','H','E']   #z is edge
+outLab        = ['C','H','E','z']   #z is edge
 outLabEncoder = preprocessing.LabelEncoder()
 outLabEncoder.fit(outLab)
 
-inLab        = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','X','Y','V'] #z is edge
+inLab        = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','X','Y','V','z'] #z is edge
 inLabEncoder = preprocessing.LabelEncoder()
 inLabEncoder.fit(inLab) 
 
@@ -47,7 +48,7 @@ for i in range(0, NUM_TRAIN_SEQ):
 encTestArray = []
 for i in range(0, NUM_TEST_SEQ):
 	arrayOfCharsInTest  = list(splitByLine2[(i*4)+2])
-	arrayOfCharsOutTest = list(splitByLine2((i*4)+3])
+	arrayOfCharsOutTest = list(splitByLine2[(i*4)+3])
 	encodedInTest = inLabEncoder.transform(arrayOfCharsInTest)
 	encodedOutTest = outLabEncoder.transform(arrayOfCharsOutTest)
 	encTestArray.append([encodedInTest, encodedOutTest]) 
@@ -74,27 +75,92 @@ outEnds = np.zeros(4)
 x_test  = np.ones((1, window_size, inOneHotVectSize))
 y_test  = np.ones((1, window_size, outOneHotVectSize))
 
+encodingForInBlank  = np.zeros((1,inOneHotVectSize))
+encodingForOutBlank = np.zeros((1, outOneHotVectSize))
+encodingForInBlank[0][inOneHotVectSize-1]   = 1
+encodingForOutBlank[0][outOneHotVectSize-1] = 1
 
+#Assemble Training Set
 for i in range(0, NUM_TRAIN_SEQ):
 	xPiece = inOneHot.transform(np.array(encTrainArray[i][0]).reshape(-1,1)).toarray()
 	yPiece = outOneHot.transform(np.array(encTrainArray[i][1]).reshape(-1,1)).toarray()
 	print(xPiece.shape)
-	for j in range(0, xPiece.shape[0], win_it_size):
-		print("i",i,"j",j)
-		if j>xPiece.shape[0]-window_size:
-			pass		#TODO WE need to consider the edges  little z symbol 
-					#Right now training set is only values in middle
-		else:
-			smallXPiece = xPiece[j:j+window_size]
-			smallYPiece = yPiece[j:j+window_size]
+	start = random.randint(0, window_size-1)
+	for jjj in range(-1*start, xPiece.shape[0], win_it_size):
+		print("i",i,"j",jjj)
+		#Left edges
+		if jjj<0:
+			smallXPiece = xPiece[0:window_size+jjj]
+			smallYPiece = yPiece[0:window_size+jjj]
+			borderNeeded = abs(jjj)
+			for k in range(0, borderNeeded):
+				smallXPiece = np.vstack((encodingForInBlank, smallXPiece))
+				smallYPiece = np.vstack((encodingForOutBlank, smallYPiece))
 			x_train = np.vstack((x_train, np.expand_dims(smallXPiece, 0)))
 			y_train = np.vstack((y_train, np.expand_dims(smallYPiece, 0)))
+
+		#Right edges
+		elif jjj>xPiece.shape[0]-window_size:
+			smallXPiece   = xPiece[jjj:]
+			smallYPiece   = yPiece[jjj:]
+			borderNeeded  = window_size - smallXPiece.shape[0]
+			for k in range(0, borderNeeded):
+				smallXPiece   = np.vstack((smallXPiece, encodingForInBlank))
+				smallYPiece   = np.vstack((smallYPiece, encodingForOutBlank))
+
+			x_train = np.vstack((x_train, np.expand_dims(smallXPiece, 0)))
+			y_train = np.vstack((y_train, np.expand_dims(smallYPiece, 0)))
+		else:
+			smallXPiece = xPiece[jjj:jjj+window_size]
+			smallYPiece = yPiece[jjj:jjj+window_size]
+			x_train = np.vstack((x_train, np.expand_dims(smallXPiece, 0)))
+			y_train = np.vstack((y_train, np.expand_dims(smallYPiece, 0)))
+
+
+#Assemble Testing Set
+
+for i in range(0, NUM_TEST_SEQ):
+	xPiece = inOneHot.transform(np.array(encTestArray[i][0]).reshape(-1,1)).toarray()
+	yPiece = outOneHot.transform(np.array(encTestArray[i][1]).reshape(-1,1)).toarray()
+	print(xPiece.shape)
+	for jjj in range(-1*int(window_size/2), xPiece.shape[0]+int(window_size/2)):
+		print("i",i,"j",jjj)
+		#Left edges
+		if jjj<0:
+			smallXPiece = xPiece[0:window_size+jjj]
+			smallYPiece = yPiece[0:window_size+jjj]
+			borderNeeded = abs(jjj)
+			for k in range(0, borderNeeded):
+				smallXPiece = np.vstack((encodingForInBlank, smallXPiece))
+				smallYPiece = np.vstack((encodingForOutBlank, smallYPiece))
+			x_test = np.vstack((x_test, np.expand_dims(smallXPiece, 0)))
+			y_test = np.vstack((y_test, np.expand_dims(smallYPiece, 0)))
+
+		#Right edges
+		elif jjj>xPiece.shape[0]-window_size:
+			smallXPiece   = xPiece[jjj:]
+			smallYPiece   = yPiece[jjj:]
+			borderNeeded  = window_size - smallXPiece.shape[0]
+			for k in range(0, borderNeeded):
+				smallXPiece   = np.vstack((smallXPiece, encodingForInBlank))
+				smallYPiece   = np.vstack((smallYPiece, encodingForOutBlank))
+
+			x_test = np.vstack((x_test, np.expand_dims(smallXPiece, 0)))
+			y_test = np.vstack((y_test, np.expand_dims(smallYPiece, 0)))
+		else:
+			smallXPiece = xPiece[jjj:jjj+window_size]
+			smallYPiece = yPiece[jjj:jjj+window_size]
+			x_test = np.vstack((x_test, np.expand_dims(smallXPiece, 0)))
+			y_test = np.vstack((y_test, np.expand_dims(smallYPiece, 0)))
+
 
 
 
 #to eliminate the all 1 initialization row needed for shape preservation
 x_train = np.delete(x_train, 0,0)
 y_train = np.delete(y_train, 0,0)
+x_test  = np.delete(x_test, 0,0)
+y_test  = np.delete(y_test, 0,0)
 #Alignments
 
 
@@ -104,7 +170,6 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 #simple Keras model
 
-pdb.set_trace()
 #inOneHotVectSize=22 #
 
 
@@ -126,12 +191,25 @@ model.compile(loss='mse',
 		optimizer='sgd',
 		metrics=['accuracy'])
 #x,y are numpy array
-model.fit(x_train, y_train, epochs=500, batch_size=32)
+model.fit(x_train, y_train, epochs=5, batch_size=1)
 
 #Evaluate model
-model.predict(x_test, batch_size=32)
+test_prediction = model.predict(x_test, batch_size=32)
+numCorrect = 0
+numWrong   = 0
+for ii,jj in zip(test_prediction, y_train):
+	a = np.argmax(ii[int(window_size/2)])
+	b = np.argmax(jj[int(window_size/2)])
+	print(a,b)
+	if(a==b):
+		numCorrect = numCorrect +1
+	else:
+		numWrong  = numWrong+1
+	
 
 
-
+print(numWrong)
+print(numCorrect)
+pdb.set_trace()
 
 
