@@ -16,9 +16,9 @@ data        = response.data.decode('utf-8')
 splitByLine = data.split('\n')
 
 
-response2   = http.request('GET', "http://calla.rnet.missouri.edu/cheng_course/mlbioinfo/ss_test.txt")
+response2   = http.request('GET', "http://calla.rnet.missouri.edu/cheng_courses/mlbioinfo/ss_test.txt")
 dataTest    = response.data.decode('utf-8')
-splitByLine2 = data.split('\n')
+splitByLine2 = dataTest.split('\n')
 
 NUM_TRAIN_SEQ = 1180
 NUM_TEST_SEQ  = 126
@@ -47,7 +47,7 @@ for i in range(0, NUM_TRAIN_SEQ):
 encTestArray = []
 for i in range(0, NUM_TEST_SEQ):
 	arrayOfCharsInTest  = list(splitByLine2[(i*4)+2])
-	arrayOfCharsOutTest = list(splitByLine2((i*4)+3])
+	arrayOfCharsOutTest = list(splitByLine2[(i*4)+3])
 	encodedInTest = inLabEncoder.transform(arrayOfCharsInTest)
 	encodedOutTest = outLabEncoder.transform(arrayOfCharsOutTest)
 	encTestArray.append([encodedInTest, encodedOutTest]) 
@@ -78,9 +78,9 @@ y_test  = np.ones((1, window_size, outOneHotVectSize))
 for i in range(0, NUM_TRAIN_SEQ):
 	xPiece = inOneHot.transform(np.array(encTrainArray[i][0]).reshape(-1,1)).toarray()
 	yPiece = outOneHot.transform(np.array(encTrainArray[i][1]).reshape(-1,1)).toarray()
-	print(xPiece.shape)
+	#print(xPiece.shape)
 	for j in range(0, xPiece.shape[0], win_it_size):
-		print("i",i,"j",j)
+		#print("i",i,"j",j)
 		if j>xPiece.shape[0]-window_size:
 			pass		#TODO WE need to consider the edges  little z symbol 
 					#Right now training set is only values in middle
@@ -98,13 +98,12 @@ y_train = np.delete(y_train, 0,0)
 #Alignments
 
 
-
-
 from keras.models import Sequential
 from keras.layers import Dense, Activation
+from keras.layers import *
 #simple Keras model
 
-pdb.set_trace()
+#pdb.set_trace()
 #inOneHotVectSize=22 #
 
 
@@ -118,9 +117,20 @@ pdb.set_trace()
 ## Dealing with edge cases
 ## Incorporation of Homologous Sequences 
 ##TODO TODO TODO
-model = Sequential([Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
 
+##It doesn't work now, still working on it, it is hard to set filter numbers and kernel size
+filters = 3 # 卷积核数量为 1
+kernel_size = 3 # 卷积核大小为 5
+#model = Sequential([Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
 
+model=Sequential()
+#model.add(Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
+model.add(Conv1D(filters, kernel_size, strides=1, padding='valid', input_shape=(window_size, inOneHotVectSize), activation="relu"))
+model.add(MaxPool1D(pool_size=3, strides=1, padding="valid"))
+model.add(Flatten())
+model.add(Dense(21, activation='relu'))
+model.add(Dense(3, activation='softmax'))
+print(model.summary())
 
 model.compile(loss='mse',
 		optimizer='sgd',
