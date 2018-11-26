@@ -17,9 +17,9 @@ data        = response.data.decode('utf-8')
 splitByLine = data.split('\n')
 
 
-response2   = http.request('GET', "http://calla.rnet.missouri.edu/cheng_course/mlbioinfo/ss_test.txt")
+response2   = http.request('GET', "http://calla.rnet.missouri.edu/cheng_courses/mlbioinfo/ss_test.txt")
 dataTest    = response.data.decode('utf-8')
-splitByLine2 = data.split('\n')
+splitByLine2 = dataTest.split('\n')
 
 NUM_TRAIN_SEQ = 1180
 NUM_TEST_SEQ  = 126
@@ -164,13 +164,11 @@ y_test  = np.delete(y_test, 0,0)
 #Alignments
 
 
-
-
 from keras.models import Sequential
 from keras.layers import Dense, Activation
+from keras.layers import *
 #simple Keras model
 
-#inOneHotVectSize=22 #
 
 
 ##TODO TODO TODO
@@ -183,9 +181,20 @@ from keras.layers import Dense, Activation
 ## Dealing with edge cases
 ## Incorporation of Homologous Sequences 
 ##TODO TODO TODO
-model = Sequential([Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
 
+##It doesn't work now, still working on it, it is hard to set filter numbers and kernel size
+filters = 3 # 卷积核数量为 1
+kernel_size = 3 # 卷积核大小为 5
+#model = Sequential([Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
 
+model=Sequential()
+#model.add(Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
+model.add(Conv1D(filters, kernel_size, strides=1, padding='valid', input_shape=(window_size, inOneHotVectSize), activation="relu"))
+model.add(MaxPool1D(pool_size=3, strides=1, padding="valid"))
+model.add(Flatten())
+model.add(Dense(21, activation='relu'))
+model.add(Dense(3, activation='softmax'))
+print(model.summary())
 
 model.compile(loss='mse',
 		optimizer='sgd',
