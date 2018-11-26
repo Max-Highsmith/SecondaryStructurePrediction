@@ -182,25 +182,31 @@ from keras.layers import *
 ## Incorporation of Homologous Sequences 
 ##TODO TODO TODO
 
-##It doesn't work now, still working on it, it is hard to set filter numbers and kernel size
-filters = 3 # 卷积核数量为 1
-kernel_size = 3 # 卷积核大小为 5
+##Can run now
+
 #model = Sequential([Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
 
 model=Sequential()
 #model.add(Dense(outOneHotVectSize, input_shape=(window_size, inOneHotVectSize,)), Activation('relu')])
-model.add(Conv1D(filters, kernel_size, strides=1, padding='valid', input_shape=(window_size, inOneHotVectSize), activation="relu"))
-model.add(MaxPool1D(pool_size=3, strides=1, padding="valid"))
-model.add(Flatten())
-model.add(Dense(21, activation='relu'))
-model.add(Dense(3, activation='softmax'))
+# model.add(Conv1D(filters, kernel_size, strides=1, padding='valid', input_shape=(window_size, inOneHotVectSize), activation="relu"))
+# model.add(MaxPool1D(pool_size=3, strides=1, padding="valid"))
+# model.add(Flatten())
+# model.add(Dense(21, activation='relu'))
+# model.add(Dense(3, activation='softmax'))
+
+model.add(Conv1D(128, 11, strides=1, padding='same', input_shape=(window_size, inOneHotVectSize), activation="relu"))
+model.add(Dropout(0.4))
+model.add(Conv1D(64, 11, strides=1, padding='same', activation="relu"))
+model.add(Dropout(0.4))
+model.add(Conv1D(4, 11, strides=1, padding='same', activation="softmax"))
+
 print(model.summary())
 
 model.compile(loss='mse',
 		optimizer='sgd',
 		metrics=['accuracy'])
 #x,y are numpy array
-model.fit(x_train, y_train, epochs=5, batch_size=1)
+model.fit(x_train, y_train, epochs=10, batch_size=1)
 
 #Evaluate model
 test_prediction = model.predict(x_test, batch_size=32)
