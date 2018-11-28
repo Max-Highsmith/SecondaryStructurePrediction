@@ -7,7 +7,7 @@ from sklearn import preprocessing
 import urllib3
 import utility as ut
 
-USING_ALIGN=True
+USING_ALIGN=False
 window_size=11
 win_it_size = 50
 inOneHotVectSize=22 #
