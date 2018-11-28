@@ -1,3 +1,7 @@
+#
+Use of alignment assumes the installation of PSPRO tool found here http://sysbio.rnet.missouri.edu/multicom_toolbox/tools.html
+
+
 # SecondaryStructurePrediction
 
 Deep learning secondary structure prediction

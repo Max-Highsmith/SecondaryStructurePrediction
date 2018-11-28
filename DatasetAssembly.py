@@ -1,11 +1,13 @@
+from scipy.stats import logistic
 import numpy as np
 import random
 import pdb
 #from Bio import SeqIO
 from sklearn import preprocessing
 import urllib3
+import utility as ut
 
-
+USING_ALIGN=True
 window_size=11
 win_it_size = 50
 inOneHotVectSize=22 #
@@ -31,18 +33,37 @@ outLab        = ['C','H','E','z']   #z is edge
 outLabEncoder = preprocessing.LabelEncoder()
 outLabEncoder.fit(outLab)
 
-inLab        = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','X','Y','V','z'] #z is edge
+inLab        = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V','X','z'] #z is edge
 inLabEncoder = preprocessing.LabelEncoder()
 inLabEncoder.fit(inLab) 
+
+
+def orderInEncoding(wrongOrder):
+	switcher = {
+		0: 0, 14:1, 11:2, 2:3, 1:4, 13:5, 3:6, 5:7, 6:8, 7:9, 9:10, 8:11, 10:12, 4:13, 12:14,
+		15:15, 16:16, 18:17, 20:18, 17:19, 19:20, 21:21}
+	rightOrder = wrongOrder
+	for i in range(0, len(wrongOrder)):
+		rightOrder[i] = switcher.get(wrongOrder[i], "somethings wrong")
+
+	return rightOrder
+
+def orderOutEncoding(wrongOrder):
+	switcher = {0:0, 1:2, 2:1, 3:3}
+	rightOrder = wrongOrder
+	for i in range(0, len(wrongOrder)):
+		rightOrder[i] = switcher.get(wrongOrder[i], "somethings wrong")
+	return rightOrder
 
 encTrainArray = []
 for i in range(0, NUM_TRAIN_SEQ):
 	arrayOfCharsIn  = list(splitByLine[(i*4)+2])
 	arrayOfCharsOut = list(splitByLine[(i*4)+3])
 	encodedIn = inLabEncoder.transform(arrayOfCharsIn)
+	encodedIn = orderInEncoding(encodedIn)
 	encodedOut = outLabEncoder.transform(arrayOfCharsOut)
+	encodedOut = orderOutEncoding(encodedOut)
 	encTrainArray.append([encodedIn, encodedOut])
-
 
 #Testing
 encTestArray = []
@@ -50,8 +71,11 @@ for i in range(0, NUM_TEST_SEQ):
 	arrayOfCharsInTest  = list(splitByLine2[(i*4)+2])
 	arrayOfCharsOutTest = list(splitByLine2[(i*4)+3])
 	encodedInTest = inLabEncoder.transform(arrayOfCharsInTest)
+	encodedInTest = orderInEncoding(encodedInTest)
 	encodedOutTest = outLabEncoder.transform(arrayOfCharsOutTest)
+	encodedOutTest = orderOutEncoding(encodedOutTest)
 	encTestArray.append([encodedInTest, encodedOutTest]) 
+
 
 #OneHot
 #traingin
@@ -80,10 +104,19 @@ encodingForOutBlank = np.zeros((1, outOneHotVectSize))
 encodingForInBlank[0][inOneHotVectSize-1]   = 1
 encodingForOutBlank[0][outOneHotVectSize-1] = 1
 
+
 #Assemble Training Set
 for i in range(0, NUM_TRAIN_SEQ):
 	xPiece = inOneHot.transform(np.array(encTrainArray[i][0]).reshape(-1,1)).toarray()
 	yPiece = outOneHot.transform(np.array(encTrainArray[i][1]).reshape(-1,1)).toarray()
+	
+	if USING_ALIGN:
+		ut.sequenceArrayToFasta(splitByLine[(i*4)+2])
+		sequenceInfo = ut.getBlastProb("dummy.fasta", "garb") 
+		sequenceInfo= sequenceInfo.astype('float64')
+		sequenceInfo = logistic.cdf(np.hstack((sequenceInfo, np.zeros((sequenceInfo.shape[0],2)))))
+		xPiece = xPiece + sequenceInfo
+
 	print(xPiece.shape)
 	start = random.randint(0, window_size-1)
 	for jjj in range(-1*start, xPiece.shape[0], win_it_size):
@@ -122,6 +155,19 @@ for i in range(0, NUM_TRAIN_SEQ):
 for i in range(0, NUM_TEST_SEQ):
 	xPiece = inOneHot.transform(np.array(encTestArray[i][0]).reshape(-1,1)).toarray()
 	yPiece = outOneHot.transform(np.array(encTestArray[i][1]).reshape(-1,1)).toarray()
+
+	if USING_ALIGN:
+		ut.sequenceArrayToFasta(splitByLine[(i*4)+2])
+		sequenceInfo = ut.getBlastProb("dummy.fasta", "garb") 
+		sequenceInfo= sequenceInfo.astype('float64')
+		sequenceInfo = logistic.cdf(np.hstack((sequenceInfo, np.zeros((sequenceInfo.shape[0],2)))))
+		xPiece = xPiece + sequenceInfo
+
+	print(xPiece.shape)
+	start = random.randint(0, window_size-1)
+
+
+
 	print(xPiece.shape)
 	for jjj in range(-1*int(window_size/2), xPiece.shape[0]+int(window_size/2)):
 		print("i",i,"j",jjj)
@@ -225,6 +271,5 @@ for ii,jj in zip(test_prediction, y_train):
 
 print(numWrong)
 print(numCorrect)
-pdb.set_trace()
 
 
